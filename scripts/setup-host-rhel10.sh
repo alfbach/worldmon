@@ -234,22 +234,25 @@ install_user_node() {
     return 0
   fi
 
-  log "Installing Node.js v${node_version} to ${node_dir}"
-  local tmp
-  tmp="$(mktemp -d)"
-  trap 'rm -rf "${tmp}"' RETURN
-
   if [[ "$DRY_RUN" == true ]]; then
     log "would download ${url}"
     log "would extract to ${node_dir}"
     return 0
   fi
 
-  curl -fsSL "${url}" -o "${tmp}/${archive}" || die "Failed to download ${url} — check network and resolved version ${node_version}"
+  log "Installing Node.js v${node_version} to ${node_dir}"
+  local tmp
+  tmp="$(mktemp -d)"
+
+  curl -fsSL "${url}" -o "${tmp}/${archive}" || {
+    rm -rf "${tmp}"
+    die "Failed to download ${url} — check network and resolved version ${node_version}"
+  }
   mkdir -p "${node_dir}"
   tar -xJf "${tmp}/${archive}" -C "${tmp}"
   cp -a "${tmp}/${node_dist}/." "${node_dir}/"
   chmod +x "${node_dir}/bin/node"
+  rm -rf "${tmp}"
 
   log "Node.js installed: $("${node_dir}/bin/node" --version)"
 
