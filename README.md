@@ -139,7 +139,41 @@ After the first boot, add optional API keys in `docker-compose.override.yml` (gi
 
 The startup script auto-generates required secrets in `.env` (`RELAY_SHARED_SECRET`, `REDIS_PASSWORD`, `REDIS_TOKEN`). For manual setup, key generation, and cron-based re-seeding, see **[SELF_HOSTING.md](./SELF_HOSTING.md)**.
 
-For other deployment targets (Vercel, generic Docker), see the **[self-hosting guide](https://www.worldmonitor.app/docs/getting-started)**.
+For other deployment targets (Vercel, generic Docker, Kubernetes), see the **[self-hosting guide](https://www.worldmonitor.app/docs/getting-started)** and **[deploy/kubernetes](./deploy/kubernetes/README.md)**.
+
+### OpenShift 4
+
+Deploy into a new project **`worldmon`** (display name **Worldmon**) with a single command — project creation, secrets, image build/push, stack rollout, TLS **Route**, and optional Redis seeding.
+
+**Prerequisites:** OpenShift CLI (`oc`) logged in, **Podman** or **Docker**, outbound access to the cluster registry.
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/koala73/worldmonitor.git
+cd worldmonitor
+
+# 2. Deploy everything to project "worldmon"
+./scripts/deploy-openshift.sh
+```
+
+When finished, the script prints the dashboard URL (`https://worldmonitor-<project>.<cluster-domain>`).
+
+Equivalent npm shortcut:
+
+```bash
+npm run deploy:openshift
+```
+
+**Useful options:**
+
+| Flag | Purpose |
+|------|---------|
+| `--skip-build` | Skip image build (images already in the OpenShift registry) |
+| `--skip-seed` | Skip Redis seed scripts |
+| `--project <name>` | Use a different project name (default: `worldmon`) |
+| `--dry-run` | Print planned steps without changing the cluster |
+
+Manual manifest layout, registry troubleshooting, and seeding without the script: **[deploy/openshift/README.md](./deploy/openshift/README.md)**.
 
 ---
 

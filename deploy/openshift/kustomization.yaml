@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: worldmon
+
+resources:
+  - ../kubernetes/redis.yaml
+  - ../kubernetes/redis-rest.yaml
+  - ../kubernetes/ais-relay.yaml
+  - ../kubernetes/worldmonitor.yaml
+  - route.yaml
+
+patches:
+  - path: patches/security.yaml
+
+# Image names are rewritten at deploy time by scripts/deploy-openshift.sh
+# to $(oc registry info)/worldmon/<component>:latest
+images:
+  - name: worldmonitor/app
+    newName: worldmon/app
+    newTag: latest
+  - name: worldmonitor/ais-relay
+    newName: worldmon/ais-relay
+    newTag: latest
+  - name: worldmonitor/redis-rest
+    newName: worldmon/redis-rest
+    newTag: latest
