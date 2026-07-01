@@ -66,6 +66,8 @@ Issues filed against any of the above are triaged from the same backlog — see 
 
 ## Quick Start
 
+### Local development (macOS, Linux, Windows)
+
 ```bash
 git clone https://github.com/koala73/worldmonitor.git
 cd worldmonitor
@@ -87,7 +89,57 @@ npm run dev:happy      # happy.worldmonitor.app
 npm run dev:energy     # energy.worldmonitor.app
 ```
 
-See the **[self-hosting guide](https://www.worldmonitor.app/docs/getting-started)** for deployment options (Vercel, Docker, static).
+### Self-hosting on RHEL 10
+
+Full production stack on **Red Hat Enterprise Linux 10** (and compatible clones such as AlmaLinux 10 or Rocky Linux 10): Podman/Docker, Redis, AIS relay, and the dashboard behind nginx.
+
+**Prerequisites:** `sudo` access for system packages, outbound HTTPS, and ports **3000** (dashboard) and **8079** (Redis REST proxy for seeders).
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/koala73/worldmonitor.git
+cd worldmonitor
+
+# 2. First-time setup — installs dnf packages, Node.js 22, npm deps,
+#    generates .env secrets, starts the stack, and seeds Redis
+./scripts/startup-rhel10.sh --install-system --user-node
+```
+
+When the script finishes, open **http://localhost:3000**.
+
+Equivalent npm shortcuts:
+
+```bash
+npm run setup:rhel10 -- --user-node          # system packages + Node.js only
+npm run startup:rhel10 -- --install-system --user-node   # full first-time start
+```
+
+**Subsequent starts** (system packages already installed):
+
+```bash
+cd worldmonitor
+./scripts/startup-rhel10.sh
+```
+
+**Useful options:**
+
+| Flag | Purpose |
+|------|---------|
+| `--install-system --user-node` | First run: `dnf` packages + Node.js under `~/.local/worldmonitor/node` |
+| `--dev` | Start the Vite dev server after the container stack is up |
+| `--skip-compose` | Install dependencies only, do not start containers |
+| `--skip-seed` | Skip Redis seed scripts |
+| `--dry-run` | Print planned steps without changing the system |
+
+After the first boot, add optional API keys in `docker-compose.override.yml` (gitignored) and re-seed:
+
+```bash
+./scripts/run-seeders.sh
+```
+
+The startup script auto-generates required secrets in `.env` (`RELAY_SHARED_SECRET`, `REDIS_PASSWORD`, `REDIS_TOKEN`). For manual setup, key generation, and cron-based re-seeding, see **[SELF_HOSTING.md](./SELF_HOSTING.md)**.
+
+For other deployment targets (Vercel, generic Docker), see the **[self-hosting guide](https://www.worldmonitor.app/docs/getting-started)**.
 
 ---
 
