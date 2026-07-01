@@ -1,0 +1,16 @@
+# World Monitor - protect API routes from crawlers
+
+# AI content-usage preferences (contentsignals.org draft RFC) are served as the
+# origin-wide `Content-Signal` HTTP response header (see vercel.json), NOT as a
+# robots.txt body directive — Lighthouse's robots.txt validator rejects unknown
+# directives and would drop the SEO score (#4471). Do not re-add it here.
+
+User-agent: *
+Allow: /
+Allow: /api/story
+Allow: /api/og-story
+Disallow: /api/
+Disallow: /tests/
+
+Sitemap: https://www.worldmonitor.app/sitemap.xml
+Sitemap: https://www.worldmonitor.app/blog/sitemap-index.xml
