@@ -1,0 +1,176 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: worldmonitor
+  namespace: worldmonitor
+  labels:
+    app.kubernetes.io/name: worldmonitor
+    app.kubernetes.io/component: app
+    app.kubernetes.io/part-of: worldmonitor
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+  selector:
+    app.kubernetes.io/name: worldmonitor
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worldmonitor
+  namespace: worldmonitor
+  labels:
+    app.kubernetes.io/name: worldmonitor
+    app.kubernetes.io/component: app
+    app.kubernetes.io/part-of: worldmonitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: worldmonitor
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: worldmonitor
+        app.kubernetes.io/component: app
+        app.kubernetes.io/part-of: worldmonitor
+    spec:
+      containers:
+        - name: worldmonitor
+          image: worldmonitor/app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: UPSTASH_REDIS_REST_URL
+              value: http://redis-rest:80
+            - name: UPSTASH_REDIS_REST_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-core
+                  key: REDIS_TOKEN
+            - name: LOCAL_API_PORT
+              value: "46123"
+            - name: LOCAL_API_MODE
+              value: docker
+            - name: LOCAL_API_CLOUD_FALLBACK
+              value: "false"
+            - name: WS_RELAY_URL
+              value: http://ais-relay:3004
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: GROQ_API_KEY
+                  optional: true
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: OPENROUTER_API_KEY
+                  optional: true
+            - name: AISSTREAM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: AISSTREAM_API_KEY
+                  optional: true
+            - name: FINNHUB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: FINNHUB_API_KEY
+                  optional: true
+            - name: FRED_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: FRED_API_KEY
+                  optional: true
+            - name: EIA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: EIA_API_KEY
+                  optional: true
+            - name: NASA_FIRMS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: NASA_FIRMS_API_KEY
+                  optional: true
+            - name: ACLED_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: ACLED_EMAIL
+                  optional: true
+            - name: ACLED_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: ACLED_PASSWORD
+                  optional: true
+            - name: ACLED_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: ACLED_ACCESS_TOKEN
+                  optional: true
+            - name: CLOUDFLARE_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: CLOUDFLARE_API_TOKEN
+                  optional: true
+            - name: AVIATIONSTACK_API
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: AVIATIONSTACK_API
+                  optional: true
+            - name: TRAVELPAYOUTS_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: TRAVELPAYOUTS_API_TOKEN
+                  optional: true
+            - name: LLM_API_URL
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: LLM_API_URL
+                  optional: true
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: LLM_API_KEY
+                  optional: true
+            - name: LLM_MODEL
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-api-keys
+                  key: LLM_MODEL
+                  optional: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10

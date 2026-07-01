@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: worldmonitor
+
+resources:
+  - namespace.yaml
+  - redis.yaml
+  - redis-rest.yaml
+  - ais-relay.yaml
+  - worldmonitor.yaml
+  - ingress.yaml
+
+# Override image tags for your registry, e.g.:
+# images:
+#   - name: worldmonitor/app
+#     newName: ghcr.io/myorg/worldmonitor-app
+#     newTag: "2.8.0"
+#   - name: worldmonitor/ais-relay
+#     newName: ghcr.io/myorg/worldmonitor-ais-relay
+#     newTag: "2.8.0"
+#   - name: worldmonitor/redis-rest
+#     newName: ghcr.io/myorg/worldmonitor-redis-rest
+#     newTag: "2.8.0"
+
+images:
+  - name: worldmonitor/app
+    newName: worldmonitor/app
+    newTag: latest
+  - name: worldmonitor/ais-relay
+    newName: worldmonitor/ais-relay
+    newTag: latest
+  - name: worldmonitor/redis-rest
+    newName: worldmonitor/redis-rest
+    newTag: latest

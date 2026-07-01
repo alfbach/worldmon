@@ -6,6 +6,7 @@ public/blog/
 *.log
 .env
 .env.local
+deploy/kubernetes/secrets.yaml
 .playwright-mcp/
 *-network.txt
 .vercel

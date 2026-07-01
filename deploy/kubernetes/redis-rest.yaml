@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-rest
+  namespace: worldmonitor
+  labels:
+    app.kubernetes.io/name: redis-rest
+    app.kubernetes.io/component: cache-proxy
+    app.kubernetes.io/part-of: worldmonitor
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  selector:
+    app.kubernetes.io/name: redis-rest
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-rest
+  namespace: worldmonitor
+  labels:
+    app.kubernetes.io/name: redis-rest
+    app.kubernetes.io/component: cache-proxy
+    app.kubernetes.io/part-of: worldmonitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis-rest
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis-rest
+        app.kubernetes.io/component: cache-proxy
+        app.kubernetes.io/part-of: worldmonitor
+    spec:
+      containers:
+        - name: redis-rest
+          image: worldmonitor/redis-rest:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - export SRH_CONNECTION_STRING="redis://:${REDIS_PASSWORD}@redis:6379" && exec node /app/redis-rest-proxy.mjs
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: SRH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-core
+                  key: REDIS_TOKEN
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: worldmonitor-core
+                  key: REDIS_PASSWORD
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
