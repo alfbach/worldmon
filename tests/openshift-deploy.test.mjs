@@ -32,5 +32,6 @@ describe('OpenShift 4 deploy', () => {
   it('npm script exposes deploy:openshift', async () => {
     const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'));
     assert.match(pkg.scripts['deploy:openshift'], /deploy-openshift\.sh/);
+    assert.match(pkg.scripts['startup:openshift'], /startup\.sh --openshift/);
   });
 });

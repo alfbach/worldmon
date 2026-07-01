@@ -9,7 +9,8 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { readFile } from 'node:fs/promises';
+import { readFile, access } from 'node:fs/promises';
+import { constants } from 'node:fs';
 
 import {
   ensureSelfHostEnvFile,
@@ -81,7 +82,12 @@ describe('RHEL 10 startup scripts', () => {
   const root = process.cwd();
 
   it('ships executable startup and setup scripts', async () => {
-    for (const rel of ['scripts/startup-rhel10.sh', 'scripts/setup-host-rhel10.sh']) {
+    for (const rel of [
+      'scripts/startup.sh',
+      'scripts/startup-docker.sh',
+      'scripts/startup-rhel10.sh',
+      'scripts/setup-host-rhel10.sh',
+    ]) {
       const path = join(root, rel);
       assert.equal(existsSync(path), true, `${rel} must exist`);
       const content = await readFile(path, 'utf8');
@@ -108,7 +114,16 @@ describe('RHEL 10 startup scripts', () => {
 
   it('npm scripts expose startup:rhel10 and setup:rhel10', async () => {
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-    assert.match(pkg.scripts['startup:rhel10'], /startup-rhel10\.sh/);
+    assert.match(pkg.scripts.startup, /startup\.sh/);
+    assert.match(pkg.scripts['startup:rhel10'], /startup\.sh --rhel10/);
     assert.match(pkg.scripts['setup:rhel10'], /setup-host-rhel10\.sh/);
+  });
+
+  it('unified startup.sh dispatches to platform scripts', async () => {
+    const script = await readFile(join(root, 'scripts/startup.sh'), 'utf8');
+    assert.match(script, /startup-rhel10\.sh/);
+    assert.match(script, /deploy-openshift\.sh/);
+    assert.match(script, /startup-docker\.sh/);
+    await access(join(root, 'scripts/startup-docker.sh'), constants.X_OK);
   });
 });

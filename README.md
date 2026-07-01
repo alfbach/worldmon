@@ -69,8 +69,8 @@ Issues filed against any of the above are triaged from the same backlog — see 
 ### Local development (macOS, Linux, Windows)
 
 ```bash
-git clone https://github.com/koala73/worldmonitor.git
-cd worldmonitor
+git clone https://github.com/alfbach/worldmon.git
+cd worldmon
 npm install
 npm run dev
 ```
@@ -97,12 +97,12 @@ Full production stack on **Red Hat Enterprise Linux 10** (and compatible clones 
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/koala73/worldmonitor.git
-cd worldmonitor
+git clone https://github.com/alfbach/worldmon.git
+cd worldmon
 
 # 2. First-time setup — installs dnf packages, Node.js 22, npm deps,
 #    generates .env secrets, starts the stack, and seeds Redis
-./scripts/startup-rhel10.sh --install-system --user-node
+./scripts/startup.sh --rhel10 --install-system --user-node
 ```
 
 When the script finishes, open **http://localhost:3000**.
@@ -111,14 +111,14 @@ Equivalent npm shortcuts:
 
 ```bash
 npm run setup:rhel10 -- --user-node          # system packages + Node.js only
-npm run startup:rhel10 -- --install-system --user-node   # full first-time start
+npm run startup -- --rhel10 --install-system --user-node   # full first-time start
 ```
 
 **Subsequent starts** (system packages already installed):
 
 ```bash
-cd worldmonitor
-./scripts/startup-rhel10.sh
+cd worldmon
+./scripts/startup.sh --rhel10
 ```
 
 **Useful options:**
@@ -149,11 +149,11 @@ Deploy into a new project **`worldmon`** (display name **Worldmon**) with a sing
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/koala73/worldmonitor.git
-cd worldmonitor
+git clone https://github.com/alfbach/worldmon.git
+cd worldmon
 
 # 2. Deploy everything to project "worldmon"
-./scripts/deploy-openshift.sh
+./scripts/startup.sh --openshift
 ```
 
 When finished, the script prints the dashboard URL (`https://worldmonitor-<project>.<cluster-domain>`).
@@ -161,7 +161,7 @@ When finished, the script prints the dashboard URL (`https://worldmonitor-<proje
 Equivalent npm shortcut:
 
 ```bash
-npm run deploy:openshift
+npm run startup:openshift
 ```
 
 **Useful options:**
@@ -174,6 +174,15 @@ npm run deploy:openshift
 | `--dry-run` | Print planned steps without changing the cluster |
 
 Manual manifest layout, registry troubleshooting, and seeding without the script: **[deploy/openshift/README.md](./deploy/openshift/README.md)**.
+
+### Startup script reference
+
+| Command | Platform |
+|---------|----------|
+| `./scripts/startup.sh --rhel10 [options]` | RHEL 10 / AlmaLinux / Rocky |
+| `./scripts/startup.sh --openshift [options]` | OpenShift 4 (project `worldmon`) |
+| `./scripts/startup.sh --docker [options]` | Generic Docker/Podman Compose |
+| `./scripts/startup.sh [options]` | Auto-detect (RHEL → `--rhel10`, else `--docker`) |
 
 ---
 
