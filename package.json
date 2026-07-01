@@ -19,6 +19,8 @@
     "worktree:bootstrap": "node scripts/bootstrap-worktree.mjs",
     "worktree:bootstrap:test-only": "node scripts/bootstrap-worktree.mjs --ignore-scripts",
     "worktree:env": "node scripts/bootstrap-worktree.mjs --skip-install",
+    "startup:rhel10": "bash scripts/startup-rhel10.sh",
+    "setup:rhel10": "bash scripts/setup-host-rhel10.sh",
     "lint:md": "markdownlint-cli2 '**/*.md' '!**/node_modules/**' '!.agent/**' '!.agents/**' '!.claude/**' '!.factory/**' '!.windsurf/**' '!skills/**' '!docs/internal/**' '!docs/Docs_To_Review/**' '!docs/archive/**' '!todos/**' '!docs/plans/**' '!docs/brainstorms/**' '!docs/ideation/**'",
     "version:sync": "node scripts/sync-desktop-version.mjs",
     "version:check": "node scripts/sync-desktop-version.mjs --check",

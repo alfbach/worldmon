@@ -68,6 +68,7 @@ fi
 # resilience-recovery's Import-HHI section alone budgets 30min). Wrapping a bundle in
 # the outer cap would false-kill it mid-run and orphan the in-flight section child.
 SEED_TIMEOUT="${SEED_TIMEOUT:-1800}"
+NODE="${NODE:-node}"
 
 # Resolve once whether the outer cap is usable (timeout(1) present and a positive
 # numeric budget). Non-numeric/empty SEED_TIMEOUT → test errors → disabled (plain node).
@@ -93,9 +94,9 @@ caps_seed() {
 run_seed() {
   if caps_seed "$1"; then
     # -k: if it ignores SIGTERM, SIGKILL it 30s later so the run can move on.
-    timeout -k 30 "$SEED_TIMEOUT" node "$1" 2>&1
+    timeout -k 30 "$SEED_TIMEOUT" "$NODE" "$1" 2>&1
   else
-    node "$1" 2>&1
+    "$NODE" "$1" 2>&1
   fi
 }
 
