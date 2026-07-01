@@ -15,7 +15,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ROOT_DIR="${ROOT_DIR:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 WM_NODE_DIR="${WM_NODE_DIR:-${HOME}/.local/worldmonitor/node}"
 
 INSTALL_USER_NODE=false
@@ -96,6 +96,77 @@ read_node_version() {
   die "Could not read Node.js version from ${ROOT_DIR}/.nvmrc"
 }
 
+resolve_node_dist_version() {
+  local spec resolved
+  spec="$(read_node_version)"
+  if [[ "${spec}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "${spec}"
+    return 0
+  fi
+
+  if command -v node >/dev/null 2>&1; then
+    resolved="$(node "${ROOT_DIR}/scripts/bootstrap-worktree.mjs" --resolve-node-dist-version 2>/dev/null || true)"
+    if [[ -n "${resolved}" ]]; then
+      echo "${resolved}"
+      return 0
+    fi
+  fi
+
+  if ! command -v python3 >/dev/null 2>&1; then
+    die "Need python3 or node to resolve .nvmrc spec '${spec}' to a nodejs.org release"
+  fi
+
+  resolved="$(python3 - "${spec}" <<'PY'
+import json, sys, urllib.request
+
+spec = sys.argv[1]
+with urllib.request.urlopen("https://nodejs.org/dist/index.json", timeout=30) as resp:
+    data = json.load(resp)
+
+candidates = []
+for entry in data:
+    raw = str(entry.get("version", "")).lstrip("v")
+    parts = raw.split(".")
+    if len(parts) < 3 or not all(part.isdigit() for part in parts[:3]):
+        continue
+    if spec.isdigit():
+        if parts[0] != spec:
+            continue
+    elif raw.startswith(f"{spec}."):
+        pass
+    else:
+        continue
+    candidates.append(tuple(int(part) for part in parts[:3]))
+
+if not candidates:
+    raise SystemExit(f"No nodejs.org release found for .nvmrc spec {spec}")
+
+latest = max(candidates)
+print(f"{latest[0]}.{latest[1]}.{latest[2]}")
+PY
+)" || die "Could not resolve Node.js release for .nvmrc spec '${spec}'"
+
+  echo "${resolved}"
+}
+
+install_epel_repo() {
+  if dnf repolist 2>/dev/null | grep -qiE '\bepel\b'; then
+    log "EPEL repository already enabled"
+    return 0
+  fi
+
+  local el_version=""
+  el_version="$(rpm -E '%{rhel}' 2>/dev/null || true)"
+  log "Enabling EPEL (best-effort)"
+  if [[ "${el_version}" == "10" ]]; then
+    run dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm \
+      || warn "EPEL 10 install failed — continuing without EPEL"
+  else
+    run dnf install -y epel-release \
+      || warn "epel-release unavailable — continuing"
+  fi
+}
+
 install_dnf_packages() {
   if ! command -v dnf >/dev/null 2>&1; then
     die "dnf not found — this script targets RHEL 10 / dnf-based systems"
@@ -110,8 +181,7 @@ install_dnf_packages() {
   if dnf repolist 2>/dev/null | grep -qi epel; then
     log "EPEL repository already enabled"
   else
-    log "Enabling EPEL (best-effort)"
-    run dnf install -y epel-release || warn "epel-release unavailable — continuing"
+    install_epel_repo
   fi
 
   local packages=(
@@ -141,8 +211,18 @@ install_dnf_packages() {
 }
 
 install_user_node() {
+  if [[ "$(id -u)" -eq 0 && -n "${SUDO_USER:-}" ]]; then
+    local user_home
+    user_home="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
+    exec sudo -u "${SUDO_USER}" env \
+      WM_NODE_DIR="${WM_NODE_DIR:-${user_home}/.local/worldmonitor/node}" \
+      HOME="${user_home}" \
+      ROOT_DIR="${ROOT_DIR}" \
+      "${BASH_SOURCE[0]}" --node-only ${DRY_RUN:+--dry-run}
+  fi
+
   local node_version arch node_dist node_dir archive url
-  node_version="$(read_node_version)"
+  node_version="$(resolve_node_dist_version)"
   arch="$(detect_arch)"
   node_dist="node-v${node_version}-linux-${arch}"
   node_dir="${WM_NODE_DIR}/v${node_version}"
@@ -165,7 +245,7 @@ install_user_node() {
     return 0
   fi
 
-  curl -fsSL "${url}" -o "${tmp}/${archive}"
+  curl -fsSL "${url}" -o "${tmp}/${archive}" || die "Failed to download ${url} — check network and resolved version ${node_version}"
   mkdir -p "${node_dir}"
   tar -xJf "${tmp}/${archive}" -C "${tmp}"
   cp -a "${tmp}/${node_dist}/." "${node_dir}/"
@@ -199,12 +279,7 @@ main() {
   install_dnf_packages
 
   if [[ "$INSTALL_USER_NODE" == true ]]; then
-    if [[ -n "${SUDO_USER:-}" && "${EUID:-$(id -u)}" -eq 0 ]]; then
-      run sudo -u "${SUDO_USER}" env WM_NODE_DIR="${WM_NODE_DIR}" ROOT_DIR="${ROOT_DIR}" \
-        "${BASH_SOURCE[0]}" --node-only ${DRY_RUN:+--dry-run}
-    else
-      install_user_node
-    fi
+    install_user_node
   fi
 
   log "Host setup complete"

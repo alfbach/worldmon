@@ -100,7 +100,19 @@ ensure_node_on_path() {
   fi
 
   local node_version node_dir
-  node_version="$(tr -d ' \n\r' < "${ROOT_DIR}/.nvmrc")"
+  if command -v node >/dev/null 2>&1; then
+    node_version="$(node "${ROOT_DIR}/scripts/bootstrap-worktree.mjs" --resolve-node-dist-version 2>/dev/null || true)"
+  fi
+  if [[ -z "${node_version}" ]]; then
+    node_version="$(tr -d ' \n\r' < "${ROOT_DIR}/.nvmrc")"
+    if [[ -d "${WM_NODE_DIR}" ]]; then
+      local latest_dir
+      latest_dir="$(find "${WM_NODE_DIR}" -maxdepth 1 -type d -name "v${node_version}*" 2>/dev/null | sort -V | tail -1 || true)"
+      if [[ -n "${latest_dir}" ]]; then
+        node_version="$(basename "${latest_dir}" | sed 's/^v//')"
+      fi
+    fi
+  fi
   node_dir="${WM_NODE_DIR}/v${node_version}"
 
   if [[ -x "${node_dir}/bin/node" ]]; then

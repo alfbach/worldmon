@@ -39,6 +39,7 @@ export function parseArgs(argv = []) {
     rootDir: process.cwd(),
     ensureSelfHostEnv: false,
     printNodeVersion: false,
+    resolveNodeDistVersion: false,
     skipEnv: false,
     skipInstall: false,
   };
@@ -66,6 +67,8 @@ export function parseArgs(argv = []) {
       options.ensureSelfHostEnv = true;
     } else if (arg === '--print-node-version') {
       options.printNodeVersion = true;
+    } else if (arg === '--resolve-node-dist-version') {
+      options.resolveNodeDistVersion = true;
     } else if (arg === '--force-install') {
       options.forceInstall = true;
     } else if (arg === '--ignore-scripts') {
@@ -109,6 +112,8 @@ Options:
                       RELAY_SHARED_SECRET / REDIS_PASSWORD / REDIS_TOKEN.
   --print-node-version
                       Print the Node.js major version from .nvmrc (for shell scripts).
+  --resolve-node-dist-version
+                      Print the latest nodejs.org patch release for .nvmrc (e.g. 22 → 22.14.0).
   --dry-run           Print what would happen without changing files.
   -h, --help          Show this help text.`);
 }
@@ -123,6 +128,51 @@ export function readProjectNodeVersion(rootDir = process.cwd()) {
     throw new Error(`.nvmrc must contain a semver like 22 or 22.14.0, got: ${version}`);
   }
   return version;
+}
+
+/** Latest nodejs.org dist tag matching .nvmrc (e.g. 22 → 22.14.0). */
+export async function resolveNodeDistVersion(rootDir = process.cwd()) {
+  const spec = readProjectNodeVersion(rootDir);
+  if (/^\d+\.\d+\.\d+$/.test(spec)) return spec;
+
+  const response = await fetch('https://nodejs.org/dist/index.json');
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Node.js dist index (${response.status})`);
+  }
+
+  const entries = /** @type {Array<{ version?: string }>} */ (await response.json());
+  const candidates = [];
+
+  for (const entry of entries) {
+    const raw = String(entry.version ?? '').replace(/^v/, '');
+    const parts = raw.split('.');
+    if (parts.length < 3 || parts.some((part) => !/^\d+$/.test(part))) continue;
+
+    if (/^\d+$/.test(spec)) {
+      if (parts[0] !== spec) continue;
+    } else if (/^\d+\.\d+$/.test(spec)) {
+      if (!raw.startsWith(`${spec}.`)) continue;
+    } else {
+      continue;
+    }
+
+    candidates.push(raw);
+  }
+
+  if (candidates.length === 0) {
+    throw new Error(`No nodejs.org release found for .nvmrc spec ${spec}`);
+  }
+
+  candidates.sort((a, b) => {
+    const pa = a.split('.').map(Number);
+    const pb = b.split('.').map(Number);
+    for (let i = 0; i < 3; i += 1) {
+      if (pa[i] !== pb[i]) return pa[i] - pb[i];
+    }
+    return 0;
+  });
+
+  return candidates[candidates.length - 1];
 }
 
 export function generateSecretHex(byteLength = 32) {
@@ -404,6 +454,16 @@ if (isDirectRun) {
     } else if (options.printNodeVersion) {
       assertProjectRoot(options.rootDir);
       process.stdout.write(`${readProjectNodeVersion(options.rootDir)}\n`);
+    } else if (options.resolveNodeDistVersion) {
+      assertProjectRoot(options.rootDir);
+      resolveNodeDistVersion(options.rootDir)
+        .then((version) => {
+          process.stdout.write(`${version}\n`);
+        })
+        .catch((error) => {
+          console.error(error.message);
+          process.exit(1);
+        });
     } else {
       bootstrapWorktree(options);
     }

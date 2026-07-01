@@ -16,6 +16,7 @@ import {
   ensureSelfHostEnvFile,
   generateSecretHex,
   readProjectNodeVersion,
+  resolveNodeDistVersion,
   SELF_HOST_REQUIRED_ENV_KEYS,
 } from '../scripts/bootstrap-worktree.mjs';
 
@@ -25,6 +26,17 @@ describe('self-host bootstrap helpers', () => {
   it('reads the Node.js version from .nvmrc', () => {
     const version = readProjectNodeVersion(process.cwd());
     assert.match(version, /^\d+/);
+  });
+
+  it('resolves major-only .nvmrc to a nodejs.org patch release', async () => {
+    const spec = readProjectNodeVersion(process.cwd());
+    const resolved = await resolveNodeDistVersion(process.cwd());
+    assert.match(resolved, /^\d+\.\d+\.\d+$/);
+    if (/^\d+$/.test(spec)) {
+      assert.match(resolved, new RegExp(`^${spec}\\.`));
+    } else {
+      assert.equal(resolved, spec);
+    }
   });
 
   it('generates 64-char hex secrets', () => {
