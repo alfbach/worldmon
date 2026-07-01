@@ -334,6 +334,8 @@ export function installDependencies({
     env: {
       ...process.env,
       npm_config_cache: cacheDir,
+      // npm audit is informational during bootstrap; CI runs security-audit workflow separately.
+      npm_config_audit: 'false',
     },
     stdio: 'inherit',
   });
