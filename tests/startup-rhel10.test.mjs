@@ -88,6 +88,25 @@ describe('self-host bootstrap helpers', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it('creates minimal .env without copying full .env.example', () => {
+    const root = mkdtempSync(join(tmpdir(), 'wm-selfhost-env-'));
+    try {
+      writeFileSync(
+        join(root, '.env.example'),
+        'RESEND_FROM_EMAIL=WorldMonitor <alerts@worldmonitor.app>\nREDIS_PASSWORD=\n',
+        'utf8',
+      );
+
+      ensureSelfHostEnvFile({ log: quiet, rootDir: root });
+
+      const env = readFileSync(join(root, '.env'), 'utf8');
+      assert.doesNotMatch(env, /RESEND_FROM_EMAIL/);
+      assert.match(env, /RELAY_SHARED_SECRET=[0-9a-f]{64}/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('RHEL 10 startup scripts', () => {

@@ -12,10 +12,12 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # host-side seeders can talk to the REST proxy with the same bearer the
 # compose stack is using. Defaults removed in #3804 — the seeders fail-loud
 # if REDIS_TOKEN is not in the environment or .env.
+# Use load-dotenv.sh — .env is not guaranteed to be valid shell (e.g. email
+# display names with angle brackets).
 if [ -f "$PROJECT_DIR/.env" ]; then
   set -a
-  # shellcheck disable=SC1091
-  . "$PROJECT_DIR/.env"
+  # shellcheck disable=SC1090
+  eval "$(bash "$SCRIPT_DIR/load-dotenv.sh" "$PROJECT_DIR/.env")"
   set +a
 fi
 

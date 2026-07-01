@@ -208,12 +208,8 @@ start_compose_stack() {
 
   log "Starting stack: ${compose_cmd} ${compose_args[*]}"
   cd "${ROOT_DIR}"
-  if [[ -f "${ROOT_DIR}/.env" ]]; then
-    set -a
-    # shellcheck disable=SC1091
-    source "${ROOT_DIR}/.env"
-    set +a
-  fi
+  # Compose reads .env from the project directory — do not source it (values may
+  # contain shell metacharacters, e.g. RESEND_FROM_EMAIL="Name <addr>").
   run "${compose_bin[@]}" "${compose_args[@]}"
 }
 
@@ -248,8 +244,8 @@ main() {
     if [[ "$SKIP_SEED" != true && "$DRY_RUN" != true ]]; then
       if [[ -f "${ROOT_DIR}/.env" ]]; then
         set -a
-        # shellcheck disable=SC1091
-        source "${ROOT_DIR}/.env"
+        # shellcheck disable=SC1090
+        eval "$(bash "${ROOT_DIR}/scripts/load-dotenv.sh" "${ROOT_DIR}/.env" REDIS_TOKEN UPSTASH_REDIS_REST_TOKEN UPSTASH_REDIS_REST_URL)"
         set +a
       fi
       wait_for_redis_proxy

@@ -21,6 +21,12 @@ import {
 const LOCAL_ENV_FILES = ['.env.local', '.env'];
 const DEFAULT_NPM_CACHE = '/tmp/worldmonitor-npm-cache';
 
+const SELF_HOST_ENV_HEADER = `# World Monitor — local Docker/Podman self-hosting
+# Required secrets for docker-compose.yml (see SELF_HOSTING.md).
+# Optional API keys: copy lines from .env.example or use docker-compose.override.yml
+
+`;
+
 /** Required for Docker/Podman self-hosting — see SELF_HOSTING.md */
 export const SELF_HOST_REQUIRED_ENV_KEYS = [
   'RELAY_SHARED_SECRET',
@@ -200,7 +206,7 @@ export function ensureSelfHostEnvFile({
   if (existsSync(envPath)) {
     envText = readFileSync(envPath, 'utf8');
   } else if (existsSync(examplePath)) {
-    envText = readFileSync(examplePath, 'utf8');
+    envText = SELF_HOST_ENV_HEADER;
     result.created = true;
   } else {
     throw new Error(`Neither .env nor .env.example found under ${resolvedRoot}`);

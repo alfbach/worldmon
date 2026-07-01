@@ -94,13 +94,8 @@ start_compose() {
   compose_cmd="$(detect_compose_cmd)"
   read -r -a compose_bin <<< "${compose_cmd}"
   cd "${ROOT_DIR}"
-  if [[ -f "${ROOT_DIR}/.env" ]]; then
-    set -a
-    # shellcheck disable=SC1091
-    source "${ROOT_DIR}/.env"
-    set +a
-  fi
   log "Starting stack: ${compose_cmd} ${compose_args[*]}"
+  # Compose reads .env from the project directory — do not source it.
   run "${compose_bin[@]}" "${compose_args[@]}"
 }
 
