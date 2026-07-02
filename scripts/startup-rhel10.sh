@@ -34,6 +34,7 @@ SKIP_SEED=false
 SKIP_INSTALL=false
 INSTALL_SYSTEM=false
 INSTALL_USER_NODE=false
+OPEN_FIREWALL=false
 START_DEV=false
 DRY_RUN=false
 COMPOSE_BUILD=true
@@ -55,6 +56,7 @@ Options:
   --skip-seed        Skip Redis seeders after stack is up
   --no-build         podman/docker compose up without --build
   --dev              Start Vite dev server (npm run dev) after setup
+  --open-firewall    Open firewalld port WM_PORT/tcp on RHEL (rootless Podman)
   --dry-run          Print planned actions only
   -h, --help         Show this help
 
@@ -62,6 +64,7 @@ Environment:
   WM_NODE_DIR        Node.js install root (default: ~/.local/worldmonitor/node)
   npm_config_cache   npm cache directory (default: /tmp/worldmonitor-npm-cache)
   WM_PORT            Dashboard port (default: 3000, from docker-compose)
+  WM_DASHBOARD_WAIT_ATTEMPTS  Health-check polls (default: 900 × 2s ≈ 30 min)
 EOF
 }
 
@@ -75,6 +78,7 @@ while [[ $# -gt 0 ]]; do
     --skip-seed) SKIP_SEED=true; shift ;;
     --no-build) COMPOSE_BUILD=false; shift ;;
     --dev) START_DEV=true; shift ;;
+    --open-firewall) OPEN_FIREWALL=true; shift ;;
     --dry-run) DRY_RUN=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) die "Unknown argument: $1 (try --help)" ;;
@@ -189,17 +193,35 @@ start_compose_stack() {
   compose_cmd="$(detect_compose_cmd)"
   read -r -a compose_bin <<< "${compose_cmd}"
 
+  cd "${ROOT_DIR}"
+
+  if [[ "$START_DEV" == true ]]; then
+    log "Dev mode — starting backend containers only (redis, redis-rest, ais-relay)"
+    log "Vite will serve the dashboard on port ${WM_PORT:-3000}"
+    if [[ "$COMPOSE_BUILD" == true ]]; then
+      run "${compose_bin[@]}" "${compose_args[@]}" build redis redis-rest ais-relay
+      run "${compose_bin[@]}" "${compose_args[@]}" up -d redis redis-rest ais-relay
+    else
+      run "${compose_bin[@]}" "${compose_args[@]}" up -d redis redis-rest ais-relay
+    fi
+    return 0
+  fi
+
   if [[ "$COMPOSE_BUILD" == true ]]; then
-    compose_args+=(up -d --build)
+    log "Building worldmonitor image (first run often takes 10–20 minutes; 4 GB+ RAM recommended) …"
+    run "${compose_bin[@]}" "${compose_args[@]}" build worldmonitor
+    compose_args+=(up -d)
   else
     compose_args+=(up -d)
   fi
 
   log "Starting stack: ${compose_cmd} ${compose_args[*]}"
-  cd "${ROOT_DIR}"
   # Compose reads .env from the project directory — do not source it (values may
   # contain shell metacharacters, e.g. RESEND_FROM_EMAIL="Name <addr>").
   run "${compose_bin[@]}" "${compose_args[@]}"
+
+  local port="${WM_PORT:-3000}"
+  compose_utils_maybe_open_firewall "${port}" "${OPEN_FIREWALL}" log || true
 }
 
 run_seeders() {
@@ -243,16 +265,20 @@ main() {
   fi
 
   local port="${WM_PORT:-3000}"
-  log "Setup complete."
   if [[ "$SKIP_COMPOSE" != true && "$DRY_RUN" != true ]]; then
-    log "Waiting for dashboard on http://127.0.0.1:${port} (first build may take several minutes) …"
-    if compose_utils_wait_for_dashboard "${port}"; then
-      log "Dashboard ready: http://localhost:${port}"
+    if [[ "$START_DEV" == true ]]; then
+      log "Skipping container dashboard wait (--dev uses Vite on port ${port})"
     else
-      compose_utils_diagnose_dashboard "${ROOT_DIR}" "${port}"
-      die "Dashboard not reachable on port ${port}"
+      log "Waiting for dashboard on http://127.0.0.1:${port} (first build may take up to ~30 minutes) …"
+      if compose_utils_wait_for_dashboard "${port}"; then
+        log "Dashboard ready: http://localhost:${port}"
+      else
+        compose_utils_diagnose_dashboard "${ROOT_DIR}" "${port}"
+        die "Dashboard not reachable on port ${port}. Run: ./scripts/diagnose-self-host.sh"
+      fi
     fi
   fi
+  log "Setup complete."
 
   if [[ "$START_DEV" == true ]]; then
     start_dev_server

@@ -83,13 +83,17 @@ install_deps() {
 
 start_compose() {
   [[ "$SKIP_COMPOSE" == true ]] && return 0
-  local compose_cmd compose_args=(-f "${ROOT_DIR}/docker-compose.yml" up -d --build)
+  local compose_cmd compose_args=(-f "${ROOT_DIR}/docker-compose.yml")
   compose_cmd="$(detect_compose_cmd)"
   read -r -a compose_bin <<< "${compose_cmd}"
   cd "${ROOT_DIR}"
+  log "Building worldmonitor image (first run may take 10–20 minutes) …"
+  run "${compose_bin[@]}" "${compose_args[@]}" build worldmonitor
+  compose_args+=(up -d)
   log "Starting stack: ${compose_cmd} ${compose_args[*]}"
   # Compose reads .env from the project directory — do not source it.
   run "${compose_bin[@]}" "${compose_args[@]}"
+  compose_utils_maybe_open_firewall "${WM_PORT:-3000}" false log || true
 }
 
 run_seeders() {

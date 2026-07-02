@@ -118,6 +118,7 @@ describe('RHEL 10 startup scripts', () => {
       'scripts/startup-docker.sh',
       'scripts/startup-rhel10.sh',
       'scripts/setup-host-rhel10.sh',
+      'scripts/diagnose-self-host.sh',
     ]) {
       const path = join(root, rel);
       assert.equal(existsSync(path), true, `${rel} must exist`);

@@ -126,18 +126,30 @@ cd worldmon
 | Flag | Purpose |
 |------|---------|
 | `--install-system --user-node` | First run: `dnf` packages + Node.js under `~/.local/worldmonitor/node` |
-| `--dev` | Start the Vite dev server after the container stack is up |
+| `--dev` | Vite dev server on port 3000 (backend containers only — no worldmonitor image) |
+| `--open-firewall` | Open firewalld port 3000/tcp (needed for rootless Podman on RHEL) |
 | `--skip-compose` | Install dependencies only, do not start containers |
 
-If **http://localhost:3000** does not load after startup, the `worldmonitor` container may still be building or failed to start. Check status and logs:
+If **http://localhost:3000** does not load after startup:
 
 ```bash
-podman compose ps
-podman logs worldmonitor --tail 50
-curl -fsS http://127.0.0.1:3000/api/health
+./scripts/diagnose-self-host.sh
 ```
 
-For remote access on RHEL with rootless Podman, you may need to open firewalld: `sudo firewall-cmd --add-port=3000/tcp --permanent && sudo firewall-cmd --reload`.
+Common on **RHEL + rootless Podman**: firewalld blocks published ports (even localhost):
+
+```bash
+sudo firewall-cmd --add-port=3000/tcp --permanent
+sudo firewall-cmd --reload
+./scripts/startup.sh --rhel10 --open-firewall
+```
+
+If the **worldmonitor** image build failed (low RAM), use dev mode or rebuild in foreground:
+
+```bash
+podman compose build worldmonitor          # shows build errors
+./scripts/startup.sh --rhel10 --dev        # Vite UI + backend containers
+```
 | `--skip-seed` | Skip Redis seed scripts |
 | `--dry-run` | Print planned steps without changing the system |
 
