@@ -45,8 +45,8 @@ RUN npm ci --omit=dev --omit=optional --ignore-scripts
 # ── Stage 3: Runtime ─────────────────────────────────────────────────────────
 FROM node:22-alpine AS final
 
-# nginx + supervisord
-RUN apk add --no-cache nginx supervisor gettext && \
+# nginx + supervisord (+ openssl for entrypoint token generation)
+RUN apk add --no-cache nginx nginx-mod-http-gzip-static supervisor gettext openssl && \
     mkdir -p /tmp/nginx-client-body /tmp/nginx-proxy /tmp/nginx-fastcgi \
              /tmp/nginx-uwsgi /tmp/nginx-scgi /var/log/supervisor && \
     addgroup -S appgroup && adduser -S appuser -G appgroup
