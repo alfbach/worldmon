@@ -234,6 +234,7 @@ services:
 
 | Issue | Fix |
 |-------|-----|
+| 🌐 Nothing on port 3000 after startup | Run `podman compose ps` — `worldmonitor` must be **Up**. Check logs: `podman logs worldmonitor`. Rebuild: `podman compose up -d --build worldmonitor`. On RHEL with rootless Podman and remote access, open firewalld: `sudo firewall-cmd --add-port=3000/tcp --permanent && sudo firewall-cmd --reload` |
 | 📡 `0/55 OK` on health check | Seeders haven't run — `./scripts/run-seeders.sh` |
 | 🔴 nginx won't start | Check `podman logs worldmonitor` — likely missing `gettext` package |
 | 🔑 Seeders say "Missing UPSTASH_REDIS_REST_URL" | Stack isn't running, or run via `./scripts/run-seeders.sh` (auto-sets env vars) |

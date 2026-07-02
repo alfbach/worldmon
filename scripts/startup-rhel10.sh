@@ -23,6 +23,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/compose-utils.sh"
 WM_NODE_DIR="${WM_NODE_DIR:-${HOME}/.local/worldmonitor/node}"
 NPM_CACHE="${npm_config_cache:-/tmp/worldmonitor-npm-cache}"
 
@@ -135,20 +137,7 @@ ensure_node_on_path() {
 }
 
 detect_compose_cmd() {
-  if command -v podman >/dev/null 2>&1 && podman compose version >/dev/null 2>&1; then
-    echo "podman compose"
-    return 0
-  fi
-  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-    echo "docker compose"
-    return 0
-  fi
-  if command -v podman-compose >/dev/null 2>&1; then
-    echo "podman-compose"
-    return 0
-  fi
-  if command -v uvx >/dev/null 2>&1; then
-    echo "uvx podman-compose"
+  if compose_utils_detect_cmd; then
     return 0
   fi
   if [[ "$DRY_RUN" == true ]]; then
@@ -256,7 +245,13 @@ main() {
   local port="${WM_PORT:-3000}"
   log "Setup complete."
   if [[ "$SKIP_COMPOSE" != true && "$DRY_RUN" != true ]]; then
-    log "Dashboard: http://localhost:${port}"
+    log "Waiting for dashboard on http://127.0.0.1:${port} (first build may take several minutes) …"
+    if compose_utils_wait_for_dashboard "${port}"; then
+      log "Dashboard ready: http://localhost:${port}"
+    else
+      compose_utils_diagnose_dashboard "${ROOT_DIR}" "${port}"
+      die "Dashboard not reachable on port ${port}"
+    fi
   fi
 
   if [[ "$START_DEV" == true ]]; then

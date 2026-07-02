@@ -14,6 +14,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/compose-utils.sh"
 
 SKIP_INSTALL=false
 SKIP_SEED=false
@@ -56,16 +58,7 @@ run() {
 }
 
 detect_compose_cmd() {
-  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-    echo "docker compose"
-    return 0
-  fi
-  if command -v podman >/dev/null 2>&1 && podman compose version >/dev/null 2>&1; then
-    echo "podman compose"
-    return 0
-  fi
-  if command -v podman-compose >/dev/null 2>&1; then
-    echo "podman-compose"
+  if compose_utils_detect_cmd; then
     return 0
   fi
   if [[ "$DRY_RUN" == true ]]; then
@@ -111,7 +104,17 @@ main() {
   start_compose
   run_seeders
   local port="${WM_PORT:-3000}"
-  log "Setup complete — dashboard: http://localhost:${port}"
+  if [[ "$SKIP_COMPOSE" != true && "$DRY_RUN" != true ]]; then
+    log "Waiting for dashboard on http://127.0.0.1:${port} …"
+    if compose_utils_wait_for_dashboard "${port}"; then
+      log "Setup complete — dashboard: http://localhost:${port}"
+    else
+      compose_utils_diagnose_dashboard "${ROOT_DIR}" "${port}"
+      die "Dashboard not reachable on port ${port}"
+    fi
+  else
+    log "Setup complete — dashboard: http://localhost:${port}"
+  fi
 }
 
 main "$@"

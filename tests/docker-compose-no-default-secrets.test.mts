@@ -89,6 +89,10 @@ describe('docker self-hosting — no default credentials (#3804)', () => {
       /--requirepass\s+"\$\{REDIS_PASSWORD/.test(compose),
       'docker-compose.yml redis service must pass --requirepass using REDIS_PASSWORD',
     );
+    assert.ok(
+      /ais-relay:[\s\S]*RELAY_SHARED_SECRET:\s*"\$\{RELAY_SHARED_SECRET:\?/.test(compose),
+      'docker-compose.yml ais-relay service must require RELAY_SHARED_SECRET',
+    );
   });
 
   it('SELF_HOSTING.md instructions reference $REDIS_TOKEN, not the literal wm-local-token', async () => {

@@ -133,6 +133,8 @@ describe('RHEL 10 startup scripts', () => {
     assert.match(content, /docker-compose\.yml/);
     assert.match(content, /run-seeders\.sh/);
     assert.match(content, /--ensure-self-host-env/);
+    assert.match(content, /compose-utils\.sh/);
+    assert.match(content, /compose_utils_wait_for_dashboard/);
   });
 
   it('setup script installs dnf packages and optional user Node.js', async () => {

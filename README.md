@@ -128,6 +128,16 @@ cd worldmon
 | `--install-system --user-node` | First run: `dnf` packages + Node.js under `~/.local/worldmonitor/node` |
 | `--dev` | Start the Vite dev server after the container stack is up |
 | `--skip-compose` | Install dependencies only, do not start containers |
+
+If **http://localhost:3000** does not load after startup, the `worldmonitor` container may still be building or failed to start. Check status and logs:
+
+```bash
+podman compose ps
+podman logs worldmonitor --tail 50
+curl -fsS http://127.0.0.1:3000/api/health
+```
+
+For remote access on RHEL with rootless Podman, you may need to open firewalld: `sudo firewall-cmd --add-port=3000/tcp --permanent && sudo firewall-cmd --reload`.
 | `--skip-seed` | Skip Redis seed scripts |
 | `--dry-run` | Print planned steps without changing the system |
 
