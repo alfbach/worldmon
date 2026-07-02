@@ -234,7 +234,7 @@ services:
 
 | Issue | Fix |
 |-------|-----|
-| 🌐 Nothing on port 3000 / `worldmonitor` crash loop | Rebuild: `podman compose build --no-cache worldmonitor && podman compose up -d --force-recreate worldmonitor`. Logs: `podman logs worldmonitor`. On RHEL Podman, ignore `/run/secrets/redhat.repo` (fixed in entrypoint) — you must rebuild the image after `git pull`. |
+| 🌐 Nothing on port 3000 / `redhat.repo: bad variable name` | Old image still running. Run `./scripts/rebuild-dashboard.sh --open-firewall` after `git pull`. Must see `[entrypoint] worldmonitor v3` in `podman logs worldmonitor`. |
 | 📡 `0/55 OK` on health check | Seeders haven't run — `./scripts/run-seeders.sh` |
 | 🔴 nginx won't start | Check `podman logs worldmonitor` — likely missing `gettext` package |
 | 🔑 Seeders say "Missing UPSTASH_REDIS_REST_URL" | Stack isn't running, or run via `./scripts/run-seeders.sh` (auto-sets env vars) |
