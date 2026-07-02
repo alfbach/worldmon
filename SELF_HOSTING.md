@@ -239,6 +239,6 @@ services:
 | 🔴 nginx won't start | Check `podman logs worldmonitor` — likely missing `gettext` package |
 | 🔑 Seeders say "Missing UPSTASH_REDIS_REST_URL" | Stack isn't running, or run via `./scripts/run-seeders.sh` (auto-sets env vars) |
 | 📦 `npm ci` fails in Docker build | Lockfile mismatch — regenerate with `docker run --rm -v $(pwd):/app -w /app node:22-alpine npm install --package-lock-only` |
-| 🚢 No vessel data | Set `AISSTREAM_API_KEY` in both `worldmonitor` and `ais-relay` services |
+| 🚢 `worldmonitor-ais-relay` Exited (1) | Usually missing `RELAY_SHARED_SECRET` in `.env`. Check: `grep RELAY_SHARED_SECRET .env` and `podman logs worldmonitor-ais-relay`. Then `podman compose up -d ais-relay`. |
 | 🔥 No wildfire data | Set `NASA_FIRMS_API_KEY` |
 | 🌐 No outage data | Requires `CLOUDFLARE_API_TOKEN` (paid Radar access) |

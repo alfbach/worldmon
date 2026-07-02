@@ -17,6 +17,7 @@ test('Docker entrypoint creates and exports an internal LOCAL_API_TOKEN when uns
   assert.match(entrypoint, /export LOCAL_API_TOKEN/);
   assert.match(entrypoint, /envsubst '\$LOCAL_API_PORT \$LOCAL_API_TOKEN'/);
   assert.match(entrypoint, /nginx -t -c \/tmp\/nginx\.conf/);
+  assert.match(entrypoint, /\[A-Za-z_\]\[A-Za-z0-9_\]\*\)/);
 });
 
 test('Docker nginx loads Alpine gzip_static module before using gzip_static', () => {
