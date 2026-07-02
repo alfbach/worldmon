@@ -221,6 +221,10 @@ start_compose_stack() {
   run "${compose_bin[@]}" "${compose_args[@]}"
 
   local port="${WM_PORT:-3000}"
+  if [[ "$DRY_RUN" != true ]]; then
+    compose_utils_ensure_dashboard_started "${ROOT_DIR}" log || \
+      warn "worldmonitor container did not enter running state — see: ./scripts/diagnose-self-host.sh"
+  fi
   compose_utils_maybe_open_firewall "${port}" "${OPEN_FIREWALL}" log || true
 }
 

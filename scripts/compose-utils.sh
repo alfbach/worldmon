@@ -61,25 +61,23 @@ compose_utils_container_runtime() {
   return 1
 }
 
-compose_utils_worldmonitor_container_id() {
+compose_utils_worldmonitor_container_line() {
   local runtime
   runtime="$(compose_utils_container_runtime)" || return 1
-  "${runtime}" ps -a \
-    --filter "name=worldmonitor" \
-    --filter "name=^worldmonitor$" \
-    --format '{{.ID}}' 2>/dev/null | head -1
+  "${runtime}" ps -a --filter "name=worldmonitor" --format '{{.Names}} {{.Status}}' 2>/dev/null \
+    | awk '$1 == "worldmonitor" { print; exit }'
+}
+
+compose_utils_worldmonitor_is_running() {
+  local line
+  line="$(compose_utils_worldmonitor_container_line 2>/dev/null || true)"
+  [[ -n "${line}" && "${line}" == Up* ]]
 }
 
 compose_utils_worldmonitor_container_state() {
-  local runtime id
-  runtime="$(compose_utils_container_runtime)" || return 1
-  id="$("${runtime}" ps -a --filter "name=worldmonitor" --format '{{.ID}} {{.Names}} {{.Status}}' 2>/dev/null \
-    | awk '$2 == "worldmonitor" { print; exit }')"
-  if [[ -n "${id}" ]]; then
-    printf '%s\n' "${id}"
-    return 0
-  fi
-  "${runtime}" ps -a --filter "name=worldmonitor" --format '{{.ID}} {{.Names}} {{.Status}}' 2>/dev/null | head -1
+  compose_utils_worldmonitor_container_line 2>/dev/null \
+    || compose_utils_container_runtime | xargs -I{} {} ps -a --filter "name=worldmonitor" --format '{{.ID}} {{.Names}} {{.Status}}' 2>/dev/null \
+      | awk '$2 == "worldmonitor" { print; exit }'
 }
 
 compose_utils_port_listening() {
@@ -149,6 +147,45 @@ compose_utils_build_service() {
   )
 }
 
+compose_utils_start_dashboard_stack() {
+  local root_dir="${1:?root dir required}"
+  local recreate="${2:-false}"
+  compose_utils_read_bin || return 1
+  (
+    cd "${root_dir}" || exit 1
+    if [[ "${recreate}" == true ]]; then
+      "${COMPOSE_BIN[@]}" -f docker-compose.yml up -d redis redis-rest ais-relay
+      "${COMPOSE_BIN[@]}" -f docker-compose.yml up -d --force-recreate worldmonitor
+    else
+      "${COMPOSE_BIN[@]}" -f docker-compose.yml up -d redis redis-rest ais-relay worldmonitor
+    fi
+  )
+}
+
+compose_utils_ensure_dashboard_started() {
+  local root_dir="${1:?root dir required}"
+  local log_fn="${2:-printf}"
+
+  if compose_utils_worldmonitor_is_running; then
+    "${log_fn}" "[compose] worldmonitor container is running"
+    return 0
+  fi
+
+  "${log_fn}" "[compose] worldmonitor container not running — starting stack services …"
+  compose_utils_start_dashboard_stack "${root_dir}" false
+  sleep 2
+
+  if compose_utils_worldmonitor_is_running; then
+    "${log_fn}" "[compose] worldmonitor container started"
+    return 0
+  fi
+
+  "${log_fn}" "[compose] WARN: worldmonitor still not running — force-recreating container" >&2
+  compose_utils_start_dashboard_stack "${root_dir}" true
+  sleep 2
+  compose_utils_worldmonitor_is_running
+}
+
 compose_utils_wait_for_dashboard() {
   local port="${1:-3000}"
   local attempts="${2:-${WM_DASHBOARD_WAIT_ATTEMPTS:-900}}"
@@ -214,11 +251,11 @@ compose_utils_diagnose_dashboard() {
     printf '\n'
 
     printf '--- image present? ---\n'
-    if "${runtime}" image exists worldmonitor:latest 2>/dev/null; then
-      printf 'worldmonitor:latest: yes\n'
+    if "${runtime}" image exists worldmonitor:latest 2>/dev/null \
+      || "${runtime}" image exists localhost/worldmonitor:latest 2>/dev/null; then
+      printf 'worldmonitor image: yes (build succeeded — run: podman compose up -d worldmonitor)\n'
     else
-      printf 'worldmonitor:latest: NO — build probably failed. Run:\n'
-      printf '  cd %s && podman compose build worldmonitor\n' "${root_dir}"
+      printf 'worldmonitor image: NO — run: podman compose build worldmonitor\n'
     fi
     printf '\n'
 
