@@ -133,6 +133,7 @@ cd worldmon
 If **http://localhost:3000** does not load after startup:
 
 ```bash
+./scripts/rebuild-dashboard.sh --open-firewall   # removes old image, rebuilds, verifies entrypoint v3
 ./scripts/diagnose-self-host.sh
 ```
 
