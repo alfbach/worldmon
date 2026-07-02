@@ -20,11 +20,12 @@ test('Docker entrypoint creates and exports an internal LOCAL_API_TOKEN when uns
   assert.match(entrypoint, /\[A-Za-z_\]\[A-Za-z0-9_\]\*\)/);
 });
 
-test('Docker nginx loads Alpine gzip_static module before using gzip_static', () => {
+test('Docker nginx uses dynamic gzip only (no gzip_static module required)', () => {
   const nginx = readProjectFile('docker/nginx.conf');
 
-  assert.match(nginx, /load_module .*gzip_static/);
-  assert.match(nginx, /gzip_static on;/);
+  assert.doesNotMatch(nginx, /^\s*gzip_static\s+on;/m);
+  assert.doesNotMatch(nginx, /load_module/);
+  assert.match(nginx, /gzip on;/);
 });
 
 test('Docker nginx injects LOCAL_API_TOKEN on private sidecar proxy requests', () => {
@@ -39,5 +40,4 @@ test('Docker healthcheck continues through nginx so the injected token is applie
   const dockerfile = readProjectFile('Dockerfile');
 
   assert.match(dockerfile, /HEALTHCHECK[\s\S]*wget -qO- http:\/\/localhost:8080\/api\/health/);
-  assert.match(dockerfile, /nginx-mod-http-gzip-static/);
 });
